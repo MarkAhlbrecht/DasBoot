@@ -1,0 +1,98 @@
+1) try this first
+proc/device-tree/hat/product
+If /proc/device-tree/hat/product exists, you have a HAT attached and loaded - and that file contains the name of HAT.
+
+Here are some sample outputs:
+
+Display-o-Tron HAT
+cat /proc/device-tree/hat/product
+Display-o-Tron HAT
+Try this first:
+Names and content of all the files in /proc/device-tree/hat/ for this device:
+
+name: hat
+product: Display-o-Tron HAT
+product_id: 0x0007
+product_ver: 0x0001
+uuid: 666dfe9b-9d78-4825-bbfe-1697048fc6cd
+vendor: Pimoroni Ltd.
+Adafruit PiTFT Plus - 3.5 inch
+cat /proc/device-tree/hat/product
+Adafruit PiTFT Plus - 3.5 inch Resistive
+Names and content of all the files in /proc/device-tree/hat/ for this device:
+
+name: hat
+product: Adafruit PiTFT Plus - 3.5 inch Resistive Touch
+product_id: 0x0000
+product_ver: 0x0000
+uuid: 684cdc28-d27f-4065-9d11-bb3f3463786d
+vendor: Adafruit Industries
+
+
+2) If that does not work......Read EEPROM
+To get serial number from PI HAT  EEPROM
+
+Read EEPROM
+EEPROM data
+These steps may not work on Raspberry Pi 2 Model B Rev 1.0 and Raspberry Pi 3 Model B boards. The firmware will take control of I2C0, causing the ID pins to be configured as inputs.
+
+Enable I2C0 and I2C1 by adding the following line to /boot/config.txt:
+
+  dtparam=i2c_vc=on
+  dtparam=i2c_arm=on
+
+Enter the following command to reboot:
+
+  sudo systemctl reboot
+
+Download and build the flash tool:
+
+ git clone https://github.com/raspberrypi/hats.git
+ cd hats/eepromutils
+ make
+
+Reading
+EEPROM data can be read with the following command:
+
+ sudo ./eepflash.sh -f=sense_read.eep -t=24c32 -r
+
+EEPROM Structure
+  HEADER  <- EEPROM header (Required)
+  ATOM1   <- Vendor info atom (Required)
+  ATOM2   <- GPIO map atom (Required)
+  ATOM3   <- DT blob atom (Required for compliance with the HAT specification)
+  ...
+  ATOMn
+EEPROM Header Structure
+  Bytes   Field
+  4       signature   signature: 0x52, 0x2D, 0x50, 0x69 ("R-Pi" in ASCII)
+  1       version     EEPROM data format version (0x00 reserved, 0x01 = first version)
+  1       reserved    set to 0
+  2       numatoms    total atoms in EEPROM
+  4       eeplen      total length in bytes of all eeprom data (including this header)
+Atom Structure
+  Bytes   Field
+  2       type        atom type
+  2       count       incrementing atom count
+  4       dlen        length in bytes of data+CRC
+  N       data        N bytes, N = dlen-2
+  2       crc16       CRC-16-CCITT of entire atom (type, count, dlen, data)
+Atom Types
+  0x0000 = invalid
+  0x0001 = vendor info
+  0x0002 = GPIO map
+  0x0003 = Linux device tree blob
+  0x0004 = manufacturer custom data
+  0x0005-0xfffe = reserved for future use
+  0xffff = invalid
+Vendor info atom data (type=0x0001):
+Note that the UUID is mandatory and must be filled in correctly according to RFC 4122 (every HAT can then be uniquely identified). It protects against the case where a user accidentally stacks 2 identical HATs on top of each other - this error case is only detectable if the EEPROM data in each is different. The UUID is also useful for manufacturers as a per-board 'serial number'.
+
+  Bytes   Field
+  16      uuid        UUID (unique for every single board ever made)
+  2       pid         product ID
+  2       pver        product version
+  1       vslen       vendor string length (bytes)
+  1       pslen       product string length (bytes)
+  X       vstr        ASCII vendor string e.g. "ACME Technology Company"
+  Y       pstr        ASCII product string e.g. "Special Sensor Board"
