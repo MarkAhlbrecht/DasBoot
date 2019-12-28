@@ -1,0 +1,24 @@
+	Loopback test
+	
+	Steps I used to perform loopback on USB port of Raspberry Pi
+
+1) Found USB breakout interface.  (Used from ESP-01 programmer)
+	a) https://www.electroschematics.com/the-mighty-esp-01-adapter/
+2) Shorted Tx to RX with jumper wire
+3) On Pi
+	a) Find what serial port are in use before plugging in USB loopback
+	b) dmesg | grep tty.  This will show existing used tty ports.
+	c) Now plug in usb breakout interface.  This can be done powered.
+	d) dmesg | grep tty.  You should now see a new tty port being used.  I saw ttyUSB0
+	e) install minicom.  sudo apt-get install minicom lsof
+	e) invoke  minicom with -s option.  sudo minicom -s
+		1) arrow down to select "serial port setup"
+			i) select A - serial device
+			ii) change /dev/ttyxxx to /dev/ttyUSB0 
+			iii) cr
+			iv) exit
+		2) you are now in minicom and can see the port is ttyUSB0.
+			i) start typing.  You should see your keys echoed on the screen.
+			ii) CTRL -A Q, yes to exit.
+			
+			
