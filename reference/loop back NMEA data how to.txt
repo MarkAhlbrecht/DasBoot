@@ -1,0 +1,26 @@
+
+1) Plug in USB breakout interface
+	I needed this to get the NMEA simulator to recognize  a serial port.
+2) Connect single jumper wire 
+	from USB breakout interface Tx pin to Raspberry Pi Rx pin (GPIO 10)
+3) Pi serial port should now be /dev/serial0
+4) USB breakout interface should now be /dev/ttyUSB0
+5) Run NMEA Simulator Chrome app
+	to get: (https://chrome.google.com/webstore/detail/nmea-simulator/dfhcgoinjchfcfnnkecjpjcnknlipcll?hl=en)
+	In Options -> settings
+		select Server
+			Set port to /dev/ttyUSB0
+			I set Speed to 9600
+			I set Data Bits to eight
+			I set Parity Bits to no
+			I set Stop Bits to one
+		Save
+	Select Start button.  You should see data changing on GUI
+6) Now NMEA 0183 simulated serial data is streaming from /dev/ttyUSB0 into /dev/serial0
+7) In Thonny, load simple_serial_with_pynmea4.py file.
+	This file will open /dev/serial0 port and start reading lines.
+	It looks for any "GGA" NMEA sentences
+	When a GGA sentence is found, it parses it with pynmea2 and prints to Thonny shell
+		Note: To get pynmea2 to run without error, I had to run:
+			python3 -m pip install pynmea2
+			This installed pynmea2 in the python3 path.
