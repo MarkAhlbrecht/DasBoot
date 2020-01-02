@@ -2,6 +2,8 @@ from sense_hat import SenseHat
 import time
 from math import cos, sin, radians, degrees, sqrt, atan2
 
+hasMotor = False
+applyCalibration = False
 """
 
   Min/Max Mag Calibration Routine
@@ -24,10 +26,36 @@ from math import cos, sin, radians, degrees, sqrt, atan2
   Note: Requires sense_hat 2.2.0 or later
 
 """
-logFile=open("/home/pi/Projects/git_scratch/VMS/calibrate_raw.csv","w+")
+logFile=open("/home/pi/Projects/DasBoot/data/calibrate_raw.csv","w+")
+
+"""
+" Motor driver
+"""
+def drive_motor(omegaMotor):
+  deadBand = 12;
+  Kpwm = 1;
+  if abs(omegaMotor) > deadBand:
+    drive1 = omegaMotor > 0
+    drive2 = not drive1
+    motorPwm = abs(Kpwm*omegaMotor)
+    if motorPwm > 100:
+      motorPwm = 100
+    #
+    # Command Motor Pins
+    #
+  else:
+    drive1 = False
+    drive2 = False
+    motorPwm = 0
+  #
+  # Command Motor Pins
+  #
+
+  return (drive1,drive2,motorPwm)
+
 sense = SenseHat()
 sense.clear()
-applyCalibration = False
+
 if applyCalibration:
     xBias = 19.67
     yBias = 33.57
@@ -52,6 +80,20 @@ xMin = 100
 yMin = 100
 xScale = 1
 yScale = 1
+
+#
+# Setup Motor Control Pins
+#
+GPIO.setmode(GPIO.BOARD)
+
+GPIO.setup(11, GPIO.OUT)
+GPIO.setup(12, GPIO.OUT)
+GPIO.setup(7, GPIO.OUT)
+pwm=GPIO.PWM(7, 100)
+pwm.start(0)
+drive1 = 0
+drive2 = 0
+motorPwm = 0
 
 
 for i in range(1,101):
@@ -113,14 +155,34 @@ while True:
   events = sense.stick.get_events()
   for event in events:
       # Skip releases
+      
       if event.action != "released":
-        if event.direction == "middle":
+        if event.direction == "left":
           xMax = -100
           yMax = -100
           xMin = 100
           yMin = 100
           xScale = 1
           yScale = 1
+          selection = True
+        elif event.direction == "right":
+          xMax = -100
+          yMax = -100
+          xMin = 100
+          yMin = 100
+          xScale = 1
+          yScale = 1
+          selection = True
+        elif event.direction == "up":
+          (drive1,drive2,motorPwm) = drive_motor(25)
+          selection = True
+        elif event.direction == "down":
+          (drive1,drive2,motorPwm) = drive_motor(-25)
+          selection = True
+        elif event.direction == "middle":
+          runFlag = False
+          (drive1,drive2,motorPwm) = drive_motor(0)
+          selection = True
 #         elif event.direction == "right":
 #           setTilt += 10
 #           selection = True
