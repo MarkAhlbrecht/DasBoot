@@ -16,33 +16,35 @@ import RPi.GPIO as GPIO
   Note: Requires sense_hat 2.2.0 or later
 
 """
+controlEnable = True
+enableMotor = True
 #
 # Configuration
 #
 #####
 # Predetermined Mag Calibraton
 ####
-xBias = 19.31
-yBias = 32.12
-xSF = 0.705
-ySF = 0.693
+xBias = -30.02851629257202
+yBias = 7.201869010925293 +1.4395752679386042
+xSF = 0.6773587707778925
+ySF = 0.7209744740877911
 
 #
 # AHRS Smoothing filter time constant
-tau = 1/40
+tau = 1/200
 
 # Controller setup
 setTilt = 0
 # Kp = -30
 # Kd = -3
 # Ki = -0
-Kp = -1
-Ki = -0.1
+Kp = -10
+Ki = -2
 Kd = 0
 #
 # Log file name
 #
-logFile=open("/home/pi/Projects/git_scratch/VMS/heading_ctrl_test.csv","w+")
+logFile=open("/home/pi/Projects/DasBoot/data/heading_ctrl_test.csv","w+")
 
 
 
@@ -542,6 +544,8 @@ pwm.start(0)
 drive1 = 0
 drive2 = 0
 motorPwm = 0
+pwm.ChangeDutyCycle(100)
+GPIO.output(7, True)
 
 #
 
@@ -719,14 +723,16 @@ while runFlag:
   dp = tiltController.Cp
   di = tiltController.Ki * tiltController.Ci
   dd = tiltController.Kd * tiltController.Cd
-#   di = 0  + (self.Ki * self.Ci) + (self.Kd * self.Cd)
-#   dd = 0
+
   
   # Motor Drive
-  (drive1,drive2,motorPwm) = drive_motor(ctrlOutput)
-  GPIO.output(11, drive1)
-  GPIO.output(12, drive2)
-  pwm.ChangeDutyCycle(motorPwm)
+  if controlEnable:
+    (drive1,drive2,motorPwm) = drive_motor(ctrlOutput)
+    
+  if enableMotor:
+    GPIO.output(11, drive1)
+    GPIO.output(12, drive2)
+    pwm.ChangeDutyCycle(motorPwm)
 
   # Manual Sense Controls
   selection = False
@@ -747,8 +753,12 @@ while runFlag:
           (drive1,drive2,motorPwm) = drive_motor(-25)
           selection = True
         elif event.direction == "middle":
-          runFlag = False
+#           runFlag = False
           (drive1,drive2,motorPwm) = drive_motor(0)
+          controlEnable = not controlEnable
+          GPIO.output(11, drive1)
+          GPIO.output(12, drive2)
+          pwm.ChangeDutyCycle(motorPwm)
           selection = True
 
   if setTilt > 180:
@@ -758,17 +768,20 @@ while runFlag:
 #
   prevTime = elapsedTime
   
-  
+  print("Att    : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(pf),degrees(rf),degrees(yf)))
+  print("Ctl In : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(yf),setTilt,error))
+  print("Ctl Out: {0:+.2f} ->  {1:+.2f} {2:+.2f} {3:+.2f} = {4:+.2f}".format(error,dp,di,dd,ctrlOutput))
+  print("Dt     : {0:+.2f}".format(deltaTime*1000))
   
   ###############################
   # Slow Loop
   ###############################
-  if (elapsedTime - prevUpdateTime)>0.25:
+  if (elapsedTime - prevUpdateTime)>1:
 #     print("0,{0},{x},{y},{z}".format(elapsedTime,**gyroRaw)) # rad/sec
 #     print("1,{0},{x},{y},{z}".format(elapsedTime,**accelRaw)) # Gs
 #     print("2,{0},{x},{y},{z}".format(elapsedTime,**magRaw))
 #     print(Cg)
-    C_GL = ortho_norm(C_GL)
+    #C_GL = ortho_norm(C_GL)
     for event in pygame.event.get():
        if event.type == QUIT:
            print("Exiting....")
@@ -781,14 +794,14 @@ while runFlag:
            sense.clear()
            sys.exit()   # end program.
            
-    horizon.update(screen, degrees(-1*rf), degrees(pf) )
-    heading.update(screen, degrees(yf), setTilt)
-    errorDial.update(screen, error )
-    propDial.update(screen, dp*1.35 )
-    integDial.update(screen, di*1.35 )
-    derivDial.update(screen, dd*1.35 )
-    motorDial.update(screen, ctrlOutput*1.35 )
-    pygame.display.update()
+    #horizon.update(screen, degrees(-1*rf), degrees(pf) )
+    #heading.update(screen, degrees(yf), setTilt)
+    #errorDial.update(screen, error )
+    #propDial.update(screen, dp*1.35 )
+    #integDial.update(screen, di*1.35 )
+    #derivDial.update(screen, dd*1.35 )
+    #motorDial.update(screen, ctrlOutput*1.35 )
+    #pygame.display.update()
 
     
 #     Cf = ortho_norm(Cf)
@@ -797,9 +810,9 @@ while runFlag:
 #     (pf,rf,yf) = c2euler(C_FL)
 #     print("Gyro : {0} {1} {2}".format(degrees(p),degrees(r),degrees(y)))
 #     print("Accel: {0} {1} {2}".format(degrees(alignPitch),degrees(alignRoll),degrees(yaw)))
-    print("Att    : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(pf),degrees(rf),degrees(yf)))
-    print("Ctl In : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(yaw),setTilt,error))
-    print("Ctl Out: {0:+.2f} ->  {1:+.2f} {2:+.2f} {3:+.2f} = {4:+.2f}".format(error,dp,di,dd,ctrlOutput))
+#     print("Att    : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(pf),degrees(rf),degrees(yf)))
+#     print("Ctl In : {0:+.2f} {1:+.2f} {2:+.2f}".format(degrees(yf),setTilt,error))
+#     print("Ctl Out: {0:+.2f} ->  {1:+.2f} {2:+.2f} {3:+.2f} = {4:+.2f}".format(error,dp,di,dd,ctrlOutput))
 
     print("")
     prevUpdateTime = elapsedTime 

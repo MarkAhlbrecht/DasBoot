@@ -73,6 +73,7 @@ class PID:
           self.Ci += error * dt 
         else:
           self.Ci = 0
+
                           
         self.Cd = 0
         if dt > 0:                              # no div by zero

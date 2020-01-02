@@ -1,9 +1,10 @@
 from sense_hat import SenseHat
 import time
 from math import cos, sin, radians, degrees, sqrt, atan2
+import RPi.GPIO as GPIO
 
 hasMotor = False
-applyCalibration = False
+applyCalibration = True
 """
 
   Min/Max Mag Calibration Routine
@@ -57,10 +58,10 @@ sense = SenseHat()
 sense.clear()
 
 if applyCalibration:
-    xBias = 19.67
-    yBias = 33.57
-    xSF = 0.71
-    ySF = 0.71
+    xBias = -30.02851629257202
+    yBias = 7.201869010925293 +1.4395752679386042
+    xSF = 0.6773587707778925
+    ySF = 0.7209744740877911
 else:
     xBias = 0
     yBias = 0
@@ -95,12 +96,24 @@ drive1 = 0
 drive2 = 0
 motorPwm = 0
 
+# GPIO.output(11, False)  # Stop motor
+# GPIO.output(12, False)
+# pwm=GPIO.PWM(7, 100)
+# pwm.start(0)
+pwm.ChangeDutyCycle(100)
+GPIO.output(7, True)
 
-for i in range(1,101):
+print("Running")
+# for i in range(1,101):
+for i in range(1,11):
   gyroRaw = sense.get_gyroscope_raw()
   accelRaw = sense.get_accelerometer_raw()
   magRaw = sense.get_compass_raw()
   temp = sense.get_temperature()
+#   drive_motor(100)
+print("Stopping")
+GPIO.output(12, False)
+GPIO.output(11, False)
 ####
 # Main game loop
 ####
@@ -150,38 +163,49 @@ while True:
 #   orientation["yaw"] = degrees(atan2(-1*magCaly,magCalx))
   orientation["yaw"] = degrees(atan2(-1*magRaw["y"],magRaw["x"] ))
   logFile.write("3,{0},{pitch},{roll},{yaw}\r\n".format(elapsedTime,**orientation))
-  
+
+# Motor Drive
+#   (drive1,drive2,motorPwm) = drive_motor(ctrlOutput)
+  GPIO.output(11, drive1)
+  GPIO.output(12, drive2)
+  pwm.ChangeDutyCycle(motorPwm)
+
   selection = False
   events = sense.stick.get_events()
   for event in events:
       # Skip releases
       
       if event.action != "released":
-        if event.direction == "left":
+        if event.direction == "up":
           xMax = -100
           yMax = -100
           xMin = 100
           yMin = 100
           xScale = 1
           yScale = 1
-          selection = True
-        elif event.direction == "right":
-          xMax = -100
-          yMax = -100
-          xMin = 100
-          yMin = 100
-          xScale = 1
-          yScale = 1
-          selection = True
-        elif event.direction == "up":
-          (drive1,drive2,motorPwm) = drive_motor(25)
+          print("---Up")
           selection = True
         elif event.direction == "down":
+          xMax = -100
+          yMax = -100
+          xMin = 100
+          yMin = 100
+          xScale = 1
+          yScale = 1
+          print("---Down")
+          selection = True
+        elif event.direction == "left":
+          (drive1,drive2,motorPwm) = drive_motor(25)
+          print("---Left")
+          selection = True
+        elif event.direction == "right":
           (drive1,drive2,motorPwm) = drive_motor(-25)
+          print("---Right")
           selection = True
         elif event.direction == "middle":
           runFlag = False
           (drive1,drive2,motorPwm) = drive_motor(0)
+          print("---Middle")
           selection = True
 #         elif event.direction == "right":
 #           setTilt += 10
