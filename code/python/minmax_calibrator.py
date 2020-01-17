@@ -5,6 +5,8 @@ import RPi.GPIO as GPIO
 
 hasMotor = False
 applyCalibration = True
+senseHatNum = 2
+
 """
 
   Min/Max Mag Calibration Routine
@@ -58,10 +60,16 @@ sense = SenseHat()
 sense.clear()
 
 if applyCalibration:
-    xBias = -30.02851629257202
-    yBias = 7.201869010925293 +1.4395752679386042
-    xSF = 0.6773587707778925
-    ySF = 0.7209744740877911
+    if senseHatNum == 1:
+        xBias = -30.02851629257202
+        yBias = 7.201869010925293 +1.4395752679386042
+        xSF = 0.6773587707778925
+        ySF = 0.7209744740877911
+    else:
+        xBias = 40.59622859954834
+        yBias = 56.694664001464844
+        xSF = 0.6992602070692628
+        ySF = 0.7003758272879376
 else:
     xBias = 0
     yBias = 0
