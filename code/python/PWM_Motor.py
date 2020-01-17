@@ -29,48 +29,26 @@ class PWM_Motor:
         GPIO.output(7, True)
         GPIO.output(fwdGPIO, self.forward)
         GPIO.output(revGPIO, self.reverse)
-        pwm.ChangeDutyCycle(motorPwm)
+        pwm.ChangeDutyCycle(self.motorPwm)
 
-    def drive_motor(omegaMotor):
+    def drive_motor(throttle):
  
-        if abs(omegaMotor) > deadBand:
-            drive1 = omegaMotor > 0
-            drive2 = not drive1
-            motorPwm = abs(Kpwm*omegaMotor)
-            if motorPwm > 100:
-                motorPwm = 100
+        if abs(throttle) > self.deadBand:
+            self.forward = throttle > 0
+            self.reverse = not self.forward
+            self.motorPwm = abs(self.scaleFactor*throttle)
+            if self.motorPwm > 100:
+                self.motorPwm = 100
+        else:
+            self.forward = False
+            self.reverse = False
+            self.motorPwm = 0
             #
             # Command Motor Pins
             #
-            else:
-                drive1 = False
-                drive2 = False
-                motorPwm = 0
-            #
-            # Command Motor Pins
-            #
+        
+        GPIO.output(11, self.forward)
+        GPIO.output(12, self.reverse)
+        pwm.ChangeDutyCycle(self.motorPwm)
+        return (drive1,drive2,motorPwm)
 
-            return (drive1,drive2,motorPwm)
-
-
-
-#
-# Setup Motor Control Pins
-#
-GPIO.setmode(GPIO.BOARD)
-
-GPIO.setup(11, GPIO.OUT)
-GPIO.setup(12, GPIO.OUT)
-GPIO.setup(7, GPIO.OUT)
-pwm=GPIO.PWM(7, 100)
-pwm.start(0)
-drive1 = 0
-drive2 = 0
-motorPwm = 0
-pwm.ChangeDutyCycle(100)
-GPIO.output(7, True)
-
-
-    GPIO.output(11, drive1)
-    GPIO.output(12, drive2)
-    pwm.ChangeDutyCycle(motorPwm)
