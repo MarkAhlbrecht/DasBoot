@@ -10,6 +10,7 @@ pygame.init()
 import sys
 import PID
 import RPi.GPIO as GPIO
+import PWM_Motor
 
 """
 
@@ -32,10 +33,10 @@ enableMotor = True
 # ySF = 0.7209744740877911
 
 # Sense Hat 2
-xBias = 40.59622859954834
-yBias = 56.694664001464844
-xSF = 0.6992602070692628
-ySF = 0.7003758272879376
+xBias = 2.701296329498291
+yBias = 19.79104995727539
+xSF = 0.6955512793747712
+ySF = 0.7164366008777275
 #
 # AHRS Smoothing filter time constant
 tau = 1/200
@@ -53,343 +54,9 @@ Kd = 0
 #
 logFile=open("/home/pi/Projects/DasBoot/data/heading_ctrl_test.csv","w+")
 
+motor = PWM_Motor.PWM_Motor(fwdGPIO=11, revGPIO=12, pwdGPIO=7, deadband=0, scaleFactor=1)
 
 
-# """
-# " Dials Objects
-# """
-# white = (255, 255, 255) 
-# green = (0, 255, 0) 
-# blue = (0, 0, 128)
-# grey = (50, 50, 50)
-# transparent = (255,255,0)
-# orange = (255,128,0)
-# 
-# class Dial:
-#    """
-#    Generic dial type.
-#    """
-#    def __init__(self, image, frameImage, x=0, y=0, w=0, h=0):
-#        """
-#        x,y = coordinates of top left of dial.
-#        w,h = Width and Height of dial.
-#        """
-#        self.x = x 
-#        self.y = y
-#        self.image = image
-#        self.frameImage = frameImage
-#        self.dial = pygame.Surface(self.frameImage.get_rect()[2:4])
-#        self.dial.fill(0xFFFF00)
-#        if(w==0):
-#           w = self.frameImage.get_rect()[2]
-#        if(h==0):
-#           h = self.frameImage.get_rect()[3]
-#        self.w = w
-#        self.h = h
-#        self.pos = self.dial.get_rect()
-#        self.pos = self.pos.move(x, y)
-# 
-#    def position(self, x, y):
-#        """
-#        Reposition top,left of dial at x,y.
-#        """
-#        self.x = x 
-#        self.y = y
-#        self.pos[0] = x 
-#        self.pos[1] = y 
-# 
-#    def position_center(self, x, y):
-#        """
-#        Reposition centre of dial at x,y.
-#        """
-#        self.x = x
-#        self.y = y
-#        self.pos[0] = x - self.pos[2]/2
-#        self.pos[1] = y - self.pos[3]/2
-# 
-#    def rotate(self, image, angle):
-#        """
-#        Rotate supplied image by "angle" degrees.
-#        This rotates round the centre of the image. 
-#        If you need to offset the centre, resize the image using self.clip.
-#        This is used to rotate dial needles and probably doesn't need to be used externally.
-#        """
-#        tmpImage = pygame.transform.rotate(image ,angle)
-#        imageCentreX = tmpImage.get_rect()[0] + tmpImage.get_rect()[2]/2
-#        imageCentreY = tmpImage.get_rect()[1] + tmpImage.get_rect()[3]/2
-# 
-#        targetWidth = tmpImage.get_rect()[2]
-#        targetHeight = tmpImage.get_rect()[3]
-# 
-#        imageOut = pygame.Surface((targetWidth, targetHeight))
-#        imageOut.fill(0xFFFF00)
-#        imageOut.set_colorkey(0xFFFF00)
-#        imageOut.blit(tmpImage,(0,0), pygame.Rect( imageCentreX-targetWidth/2,imageCentreY-targetHeight/2, targetWidth, targetHeight ) )
-#        return imageOut
-# 
-#    def clip(self, image, x=0, y=0, w=0, h=0, oX=0, oY=0):
-#        """
-#        Cuts out a part of the needle image at x,y position to the correct size (w,h).
-#        This is put on to "imageOut" at an offset of oX,oY if required.
-#        This is used to centre dial needles and probably doesn't need to be used externally.       
-#        """
-#        if(w==0):
-#            w = image.get_rect()[2]
-#        if(h==0):
-#            h = image.get_rect()[3]
-#        needleW = w + 2*math.sqrt(oX*oX)
-#        needleH = h + 2*math.sqrt(oY*oY)
-#        imageOut = pygame.Surface((needleW, needleH))
-#        imageOut.fill(0xFFFF00)
-#        imageOut.set_colorkey(0xFFFF00)
-#        imageOut.blit(image, (needleW/2-w/2+oX, needleH/2-h/2+oY), pygame.Rect(x,y,w,h))
-#        return imageOut
-# 
-#    def overlay(self, image, x, y, r=0):
-#        """
-#        Overlays one image on top of another using 0xFFFF00 (Yellow) as the overlay colour.
-#        """
-#        x -= (image.get_rect()[2] - self.dial.get_rect()[2])/2
-#        y -= (image.get_rect()[3] - self.dial.get_rect()[3])/2
-#        image.set_colorkey(0xFFFF00)
-#        self.dial.blit(image, (x,y))
-# 
-# class Heading(Dial):
-#    """
-#    Heading dial.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.
-#        """
-#        self.image = pygame.image.load('resources/HeadingWeel.png').convert()
-#        self.frameImage = pygame.image.load('resources/HeadingIndicator_Background.png').convert()
-#        self.vehicleImage = pygame.image.load('resources/HeadingIndicator_Boat.png').convert()
-#        self.needleImage = pygame.image.load('resources/HeadingIndicator_Needle.png').convert()
-#        Dial.__init__(self, self.image, self.frameImage, x, y, w, h)
-#        self.font = pygame.font.Font('freesansbold.ttf', 18)
-#        
-#    def update(self, screen, angleX, setAngle):
-#        """
-#        Called to update an Artificial horizon dial.
-#        "angleX" and "angleY" are the inputs.
-#        "screen" is the surface to draw the dial on.
-#        """
-#        angleX %= 360
-# #        angleY %= 360
-#        if (angleX > 180):
-#            angleX -= 360 
-# #        if (angleY > 90)and(angleY < 270):
-# #            angleY = 180 - angleY 
-# #        elif (angleY > 270):
-# #            angleY -= 360
-# #        tmpImage = self.clip(self.image, 0, (59-angleY)*720/180, 250, 250)
-# # create a text suface object, 
-# # on which text is drawn on it.
-#        displayAngle = angleX
-#        if displayAngle < 0:
-#            displayAngle +=360
-#        if setAngle < 0:
-#            setAngle +=360
-#        text = self.font.render("{:03d}".format(int(displayAngle)), True, orange, grey)
-#        textSetAngle = self.font.render("{:03d}".format(int(setAngle)), True, green, grey)
-# # create a rectangular object for the 
-# # text surface object 
-#        textRect = text.get_rect()  
-#   
-# # set the center of the rectangular object. 
-#        textRect.center = (150, 150)
-# 
-#        tmpImage = self.rotate(self.image, angleX)
-#        tmpImage2 = self.rotate(self.needleImage, angleX - setAngle)
-#        self.overlay(self.frameImage, 0,0)
-#        self.overlay(tmpImage, 0, 0)
-#        self.overlay(self.vehicleImage, 0,0)
-#        self.overlay(tmpImage2, 0, 0)
-#        self.overlay(text, 0, 20)
-#        self.overlay(textSetAngle, 0, 40)
-#        self.dial.set_colorkey(0xFFFF00)
-#        screen.blit( pygame.transform.scale(self.dial,(self.w,self.h)), self.pos )
-# 
-# 
-# 
-# class Horizon(Dial):
-#    """
-#    Artificial horizon dial.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.
-#        """
-#        self.image = pygame.image.load('resources/Horizon_GroundSky.png').convert()
-#        self.frameImage = pygame.image.load('resources/Horizon_Background.png').convert()
-#        self.maquetteImage = pygame.image.load('resources/Maquette_Avion.png').convert()
-#        Dial.__init__(self, self.image, self.frameImage, x, y, w, h)
-#    def update(self, screen, angleX, angleY):
-#        """
-#        Called to update an Artificial horizon dial.
-#        "angleX" and "angleY" are the inputs.
-#        "screen" is the surface to draw the dial on.
-#        """
-#        angleX %= 360
-#        angleY %= 360
-#        if (angleX > 180):
-#            angleX -= 360 
-#        if (angleY > 90)and(angleY < 270):
-#            angleY = 180 - angleY 
-#        elif (angleY > 270):
-#            angleY -= 360
-#        tmpImage = self.clip(self.image, 0, (59-angleY)*720/180, 250, 250)
-#        tmpImage = self.rotate(tmpImage, angleX)
-#        self.overlay(tmpImage, 0, 0)
-#        self.overlay(self.frameImage, 0,0)
-#        self.overlay(self.maquetteImage, 0,0)
-#        self.dial.set_colorkey(0xFFFF00)
-#        screen.blit( pygame.transform.scale(self.dial,(self.w,self.h)), self.pos )
-# 
-# class TurnCoord(Dial):
-#    """
-#    Turn Coordinator dial.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.
-#        """
-#        self.image = pygame.image.load('resources/TurnCoordinatorAircraft.png').convert()
-#        self.frameImage = pygame.image.load('resources/TurnCoordinator_Background.png').convert()
-#        self.marks = pygame.image.load('resources/TurnCoordinatorMarks.png').convert()
-#        self.ball = pygame.image.load('resources/TurnCoordinatorBall.png').convert()
-#        Dial.__init__(self, self.image, self.frameImage, x, y, w, h)
-#    def update(self, screen, angleX, angleY):
-#        """
-#        Called to update a Turn Coordinator dial.
-#        "angleX" and "angleY" are the inputs.
-#        "screen" is the surface to draw the dial on.       
-#        """
-#        angleX %= 360 
-#        angleY %= 360
-#        if (angleX > 180):
-#            angleX -= 360 
-#        if (angleY > 180):
-#            angleY -= 360
-#        if(angleY > 14): 
-#            angleY = 14
-#        if(angleY < -14): 
-#            angleY = -14
-#        tmpImage = self.clip(self.image, 0, 0, 0, 0, 0, -12)
-#        tmpImage = self.rotate(tmpImage, angleX)
-#        self.overlay(self.frameImage, 0,0)
-#        self.overlay(tmpImage, 0, 0)
-#        tmpImage = self.clip(self.marks, 0, 0, 0, 0, 0, 0)
-#        self.overlay(tmpImage, 0, 80)
-#        tmpImage = self.clip(self.ball, 0, 0, 0, 0, 0, 300)
-#        tmpImage = self.rotate(tmpImage, angleY)
-#        self.overlay(tmpImage, 0, -220)
-#        self.dial.set_colorkey(0xFFFF00)
-#        screen.blit( pygame.transform.scale(self.dial,(self.w,self.h)), self.pos )
-# 
-# class Generic(Dial):
-#    """
-#    Generic Dial. This is built on by other dials.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.       
-#        """
-#        self.image = pygame.image.load('resources/AirSpeedNeedle.png').convert()
-#        self.frameImage = pygame.image.load('resources/Indicator_Background.png').convert()
-#        Dial.__init__(self, self.image, self.frameImage, x, y, w, h)
-#    def update(self, screen, angleX, iconLayer=0):
-#        """
-#        Called to update a Generic dial.
-#        "angleX" and "angleY" are the inputs.
-#        "screen" is the surface to draw the dial on.       
-#        """
-#        angleX %= 360
-#        angleX = 360 - angleX
-#        tmpImage = self.clip(self.image, 0, 0, 0, 0, 0, -35)
-#        tmpImage = self.rotate(tmpImage, angleX)
-#        self.overlay(self.frameImage, 0,0)
-#        if iconLayer:
-#           self.overlay(iconLayer[0],iconLayer[1],iconLayer[2])
-#        self.overlay(tmpImage, 0, 0)
-#        self.dial.set_colorkey(0xFFFF00)
-#        screen.blit( pygame.transform.scale(self.dial,(self.w,self.h)), self.pos )
-# 
-# class Battery(Generic):
-#    """
-#    Battery dial.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.
-#        """
-#        self.icon = pygame.image.load('resources/battery2.png').convert()
-#        Generic.__init__(self, x, y, w, h)
-#        self.frameImage = pygame.image.load('resources/ledgend.png').convert()
-#    def update(self, screen, angleX):
-#        """
-#        Called to update a Battery dial.
-#        "angleX" is the input.
-#        "screen" is the surface to draw the dial on.       
-#        """
-#        if angleX > 100:
-#           angleX = 100
-#        elif angleX < 0:
-#           angleX = 0
-#        angleX *= 2.7
-#        angleX -= 135
-#        Generic.update(self, screen, angleX, (self.icon, 0, 100))
-# 
-# class RfSignal(Generic):
-#    """
-#    RF Signal dial.
-#    """
-#    def __init__(self, x=0, y=0, w=0, h=0):
-#        """
-#        Initialise dial at x,y.
-#        Default size of 300px can be overidden using w,h.
-#        """
-#        self.image = pygame.Surface((0,0))
-#        self.frameImage = pygame.image.load('resources/RF_Dial_Background.png').convert()
-#        Dial.__init__(self, self.image, self.frameImage, x, y, w, h)
-#    def update(self, screen, inputA, inputB, scanPos):
-#        """
-#        "screen" is the surface to draw the dial on.       
-#        """
-# 
-#        top = self.dial.get_rect()[0] +60
-#        left = self.dial.get_rect()[1] +30
-#        bottom = self.dial.get_rect()[0] + self.dial.get_rect()[2] -60
-#        right = self.dial.get_rect()[1] + self.dial.get_rect()[3] -30
-#        height = bottom - top
-#        middle = height/2 + top
-# 
-#        scanPos %= right -30
-#        scanPos += 30
-#        inputA %= 100
-#        inputB %= 100
-#        inputA = height * inputA / 200
-#        inputB = height * inputB / 200
-# 
-#        pygame.draw.line(self.dial, 0xFFFFFF, (scanPos,top), (scanPos,bottom), 1)
-#        pygame.draw.line(self.dial, 0x222222, (scanPos-1,top), (scanPos-1,bottom), 1)
-# 
-#        pygame.draw.line(self.dial, 0x00FFFF, (scanPos-1,middle-inputA), (scanPos-1,middle),4)
-#        pygame.draw.line(self.dial, 0xFF00FF, (scanPos-1,bottom-inputB), (scanPos-1,bottom),4)
-#        pygame.draw.line(self.dial, 0xFFFF00, (scanPos-1,middle), (scanPos-1,middle))
-# 
-#        self.overlay(self.frameImage, 0,0)
-# 
-#        self.dial.set_colorkey(0xFFFF00)
-#        screen.blit( pygame.transform.scale(self.dial,(self.w,self.h)), self.pos )
-# 
-# 
 
 
 
@@ -480,30 +147,30 @@ def update_screen(angle, show_letter = False):
       sense.set_pixel(x,y,red)
   sense.set_pixel(xorig,yorig,green)
 
-"""
-" Motor driver
-"""
-def drive_motor(omegaMotor):
-  deadBand = 12;
-  Kpwm = 1;
-  if abs(omegaMotor) > deadBand:
-    drive1 = omegaMotor > 0
-    drive2 = not drive1
-    motorPwm = abs(Kpwm*omegaMotor)
-    if motorPwm > 100:
-      motorPwm = 100
-    #
-    # Command Motor Pins
-    #
-  else:
-    drive1 = False
-    drive2 = False
-    motorPwm = 0
-  #
-  # Command Motor Pins
-  #
-
-  return (drive1,drive2,motorPwm)
+# """
+# " Motor driver
+# """
+# def drive_motor(omegaMotor):
+#   deadBand = 12;
+#   Kpwm = 1;
+#   if abs(omegaMotor) > deadBand:
+#     drive1 = omegaMotor > 0
+#     drive2 = not drive1
+#     motorPwm = abs(Kpwm*omegaMotor)
+#     if motorPwm > 100:
+#       motorPwm = 100
+#     #
+#     # Command Motor Pins
+#     #
+#   else:
+#     drive1 = False
+#     drive2 = False
+#     motorPwm = 0
+#   #
+#   # Command Motor Pins
+#   #
+# 
+#   return (drive1,drive2,motorPwm)
   
 
 """
@@ -538,21 +205,23 @@ motorDial.update(screen, 0 )
 
 
 pygame.display.update()
+
 #
 # Setup Motor Control Pins
 #
-GPIO.setmode(GPIO.BOARD)
 
-GPIO.setup(11, GPIO.OUT)
-GPIO.setup(12, GPIO.OUT)
-GPIO.setup(7, GPIO.OUT)
-pwm=GPIO.PWM(7, 100)
-pwm.start(0)
-drive1 = 0
-drive2 = 0
-motorPwm = 0
-pwm.ChangeDutyCycle(100)
-GPIO.output(7, True)
+# GPIO.setmode(GPIO.BOARD)
+# 
+# GPIO.setup(11, GPIO.OUT)
+# GPIO.setup(12, GPIO.OUT)
+# GPIO.setup(7, GPIO.OUT)
+# pwm=GPIO.PWM(7, 100)
+# pwm.start(0)
+# drive1 = 0
+# drive2 = 0
+# motorPwm = 0
+# pwm.ChangeDutyCycle(100)
+# GPIO.output(7, True)
 
 #
 
@@ -734,12 +403,12 @@ while runFlag:
   
   # Motor Drive
   if controlEnable:
-    (drive1,drive2,motorPwm) = drive_motor(ctrlOutput)
+    (drive1,drive2,motorPwm) = motor.drive(ctrlOutput)
     
-  if enableMotor:
-    GPIO.output(11, drive1)
-    GPIO.output(12, drive2)
-    pwm.ChangeDutyCycle(motorPwm)
+#   if enableMotor:
+#     GPIO.output(11, drive1)
+#     GPIO.output(12, drive2)
+#     pwm.ChangeDutyCycle(motorPwm)
 
   # Manual Sense Controls
   selection = False
@@ -754,18 +423,18 @@ while runFlag:
           setTilt += 30
           selection = True
         elif event.direction == "up":
-          (drive1,drive2,motorPwm) = drive_motor(25)
+          (drive1,drive2,motorPwm) = motor.drive(25)
           selection = True
         elif event.direction == "down":
-          (drive1,drive2,motorPwm) = drive_motor(-25)
+          (drive1,drive2,motorPwm) = motor.drive(-25)
           selection = True
         elif event.direction == "middle":
 #           runFlag = False
-          (drive1,drive2,motorPwm) = drive_motor(0)
+          (drive1,drive2,motorPwm) = motor.drive(0)
           controlEnable = not controlEnable
-          GPIO.output(11, drive1)
-          GPIO.output(12, drive2)
-          pwm.ChangeDutyCycle(motorPwm)
+#           GPIO.output(11, drive1)
+#           GPIO.output(12, drive2)
+#           pwm.ChangeDutyCycle(motorPwm)
           selection = True
 
   if setTilt > 180:
@@ -792,12 +461,13 @@ while runFlag:
     for event in pygame.event.get():
        if event.type == QUIT:
            print("Exiting....")
-           GPIO.output(11, False)
-           GPIO.output(12, False)
-           GPIO.output(7, False)
-           pwm.stop()
-
-           GPIO.cleanup()
+#            GPIO.output(11, False)
+#            GPIO.output(12, False)
+#            GPIO.output(7, False)
+#            pwm.stop()
+# 
+#            GPIO.cleanup()
+           motor.close()
            sense.clear()
            sys.exit()   # end program.
            
@@ -825,10 +495,11 @@ while runFlag:
     prevUpdateTime = elapsedTime 
 
 print("Exiting....")
-GPIO.output(11, False)
-GPIO.output(12, False)
-GPIO.output(7, False)
-pwm.stop()
+# GPIO.output(11, False)
+# GPIO.output(12, False)
+# GPIO.output(7, False)
+# pwm.stop()
+motor.close()
 
 GPIO.cleanup()
 sense.clear()
