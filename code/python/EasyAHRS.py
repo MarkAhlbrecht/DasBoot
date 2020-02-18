@@ -6,7 +6,7 @@ from math import cos, sin, radians, degrees, sqrt, atan2, asin
 
 class EasyAHRS:   
     
-    def __init__(self,senseHatNum=1):
+    def __init__(self,senseHatNum=1,timeInit=0):
         
         #####
         # Predetermined Mag Calibraton
@@ -33,6 +33,11 @@ class EasyAHRS:
         
         self.sense = SenseHat()
         self.senseHatNum = senseHatNum
+        if timeInit>0:
+            self.startTime = timeInit
+        else:
+            self.startTime = time.time()
+            
         print("initialized {0}".format(self.senseHatNum))
        
     def warmup(self):
@@ -153,4 +158,88 @@ class EasyAHRS:
         return Con
 
     
+    def update(self):
+        r180 = radians(180)
+        nr180 = radians(-180)
+        r360 = radians(360)
+
+        deltaTheta = np.array([0, 0 , 0])
+        accumTheta = np.array([0, 0 , 0])
+        omega = np.array( [0, 0, 0] )
+        deltaC = np.ones( (3,3) )
+
+        prevTime = time.time() - startTime
+        # The stuff above should go somewhere else
+        
+        elapsedTime = time.time() - self.startTime
+  
+        gyroRaw = sense.get_gyroscope_raw()
+        accelRaw = sense.get_accelerometer_raw()
+        magRaw = sense.get_compass_raw()
+        temp = sense.get_temperature()
+
+  
+#  logFile.write("0,{0},{x},{y},{z}\r\n".format(elapsedTime,**gyroRaw)) # rad/sec
+#  logFile.write("1,{0},{x},{y},{z}\r\n".format(elapsedTime,**accelRaw)) # Gs
+#  logFile.write("2,{0},{x},{y},{z}\r\n".format(elapsedTime,**magRaw)) # microT
+#  logFile.write("7,{0},{1}\r\n".format(elapsedTime,temp))
+        magRaw["x"] = xSF *(magRaw["x"] - xBias)
+        magRaw["y"] = ySF *(magRaw["y"] - yBias)
+ 
+        deltaTime = elapsedTime - prevTime
+  
+#   print("0,{0},{x},{y},{z}".format(elapsedTime,**gyroRaw)) # rad/sec
+#   print("1,{0},{x},{y},{z}".format(elapsedTime,**accelRaw)) # Gs
+#   print("2,{0},{x},{y},{z}".format(elapsedTime,**magRaw))
+
+        # Accumplate Rates
+        omega = np.array( (gyroRaw["x"], gyroRaw["y"], gyroRaw["z"]) ) - gyroBias
+        deltaTheta = omega*deltaTime # Basic Integration
+        accumTheta = accumTheta + deltaTheta 
+        #   print("Dt {0} {1} {2}".format(degrees(accumTheta[0]),degrees(accumTheta[1]),degrees(accumTheta[2])))
+
+        # Form the deltaC matrix from the angular rotations
+        # Single taylor series with small angle assumption
+       deltaC[0,1] = -1*deltaTheta[2]
+       deltaC[0,2] = deltaTheta[1]
+       deltaC[1,0] = deltaTheta[2]
+       deltaC[1,2] = -1*deltaTheta[0]
+       deltaC[2,0] = -1*deltaTheta[1]
+       deltaC[2,1] = deltaTheta[0]
+
+       # Update the gyro and filter solution
+       C_GL = C_GL.dot(deltaC)
+       C_FL = C_FL.dot(deltaC)
+
+       # Determine the Accel Solution
+       accelPitch = asin(-1*accelRaw["x"])
+       accelRoll = atan2(accelRaw["y"],1.0)
+       accelMag = np.array([magRaw["x"], magRaw["y"],magRaw["z"]])
+       C_AL = euler2C(accelPitch,accelRoll,0.0)
+       #   print(Ca)
+       magL = C_AL.dot(accelMag.transpose())
+       #   print(magL)
+       yaw = atan2(-1*magL[1],magL[0])
+       C_AL = euler2C(accelPitch,accelRoll,yaw)
+  
+       # Update the filtered solution with the data from the
+       # Accel based solution
+       (pf,rf,yf) = c2euler(C_FL)
+       pf = (1-tau)*pf + tau*accelPitch
+       rf = (1-tau)*rf + tau*accelRoll
+       ey = yf-yaw
+       if ey > r180:
+           ey = ey - r360
+       elif ey < -r180:
+           ey = ey + r360
+       yf = (1-tau)*yf + tau*(yf - ey)
+       if yf > r180:
+           yf = yf-r360
+       elif yf < -r180:
+           yf = yf+r360
+       C_FL = euler2C(pf,rf,yf)
+       #   print("Att --> {0} {1} {2}".format(degrees(pf),degrees(rf),degrees(yf)))
+       
+       prevTime = elapsedTime
+        
         
