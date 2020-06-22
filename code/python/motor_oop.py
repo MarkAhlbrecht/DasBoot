@@ -45,5 +45,30 @@ print("CCW at 15% speed")
 motor.drive(-15)
 sleep(2)
 
+# # CCW at 15% speed
+print("Stopping")
+motor.drive(0)
+sleep(2)
+
+loopFlag = True
+while(loopFlag):
+    cmd = input("CMD:")
+    print(cmd)
+    if cmd == 'r':
+        print("Right")
+        motor.drive(100)
+        sleep(1)
+        motor.drive(0)
+        sleep(1)
+    if cmd == 'l':
+        print("Left")
+        motor.drive(-100)
+        sleep(1)
+        motor.drive(0)
+        sleep(1)
+    if cmd == 'q':
+        motor.drive(0)
+        break    
+
 print("Closing Motor")
 motor.close()
