@@ -590,14 +590,23 @@ print("Aligning ...")
 alignSamples = 100
 for i in range(1,alignSamples+1):
     elapsedTime = time.time() - startTime  
-    gyroRaw = sense.get_gyroscope_raw()
-    accelRaw = sense.get_accelerometer_raw()
-    magRaw = sense.get_compass_raw()
+    gyroRawSense = sense.get_gyroscope_raw()
+    accelRawSense = sense.get_accelerometer_raw()
+    magRawSense = sense.get_compass_raw()
     temp = sense.get_temperature()
-
-    magRaw["x"] = xSF *(magRaw["x"] - xBias)
-    magRaw["y"] = ySF *(magRaw["y"] - yBias)
-    magRaw["z"] = zSF *(magRaw["z"] - zBias)
+    magRawSense["x"] = xSF *(magRawSense["x"] - xBias)
+    magRawSense["y"] = ySF *(magRawSense["y"] - yBias)
+    magRawSense["z"] = zSF *(magRawSense["z"] - zBias)
+    
+    gyroRaw["x"] = -1.0 * gyroRawSense["z"]
+    gyroRaw["y"] = -1.0 * gyroRawSense["x"]
+    gyroRaw["z"] = gyroRawSense["y"]
+    accelRaw["x"] = -1.0 * accelRawSense["z"]
+    accelRaw["y"] = -1.0 * accelRawSense["x"]
+    accelRaw["z"] = accelRawSense["y"]
+    magRaw["x"] = -1.0 * magRawSense["z"]
+    magRaw["y"] = -1.0 * magRawSense["x"]
+    magRaw["z"] = magRawSense["y"]
 
     logFile.write("0,{0},{x},{y},{z}\r\n".format(elapsedTime,**gyroRaw)) # rad/sec
     logFile.write("1,{0},{x},{y},{z}\r\n".format(elapsedTime,**accelRaw)) # Gs
@@ -657,18 +666,30 @@ while runFlag:
   # Fast Loop
   ######################
   elapsedTime = time.time() - startTime
-  gyroRaw = sense.get_gyroscope_raw()
-  accelRaw = sense.get_accelerometer_raw()
-  magRaw = sense.get_compass_raw()
+  gyroRawSense = sense.get_gyroscope_raw()
+  accelRawSense = sense.get_accelerometer_raw()
+  magRawSense = sense.get_compass_raw()
   temp = sense.get_temperature()
+  magRawSense["x"] = xSF *(magRawSense["x"] - xBias)
+  magRawSense["y"] = ySF *(magRawSense["y"] - yBias)
+  magRawSense["z"] = zSF *(magRawSense["z"] - zBias)
+    
+  gyroRaw["x"] = -1.0 * gyroRawSense["z"]
+  gyroRaw["y"] = -1.0 * gyroRawSense["x"]
+  gyroRaw["z"] = gyroRawSense["y"]
+  accelRaw["x"] = -1.0 * accelRawSense["z"]
+  accelRaw["y"] = -1.0 * accelRawSense["x"]
+  accelRaw["z"] = accelRawSense["y"]
+  magRaw["x"] = -1.0 * magRawSense["z"]
+  magRaw["y"] = -1.0 * magRawSense["x"]
+  magRaw["z"] = magRawSense["y"]
 
   
   logFile.write("0,{0},{x},{y},{z}\r\n".format(elapsedTime,**gyroRaw)) # rad/sec
   logFile.write("1,{0},{x},{y},{z}\r\n".format(elapsedTime,**accelRaw)) # Gs
   logFile.write("2,{0},{x},{y},{z}\r\n".format(elapsedTime,**magRaw)) # microT
   logFile.write("7,{0},{1}\r\n".format(elapsedTime,temp))
-  magRaw["x"] = xSF *(magRaw["x"] - xBias)
-  magRaw["y"] = ySF *(magRaw["y"] - yBias)
+
  
   deltaTime = elapsedTime - prevTime
   

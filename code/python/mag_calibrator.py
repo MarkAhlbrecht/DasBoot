@@ -12,8 +12,8 @@ senseHatNum = 2
   Min/Max Mag Calibration Routine
   
   Determines the Scale Factor and Bias Error in Mag Measurements
-  using the min/max technique.   This requires the IMU to be level
-  (pitch/roll = 0).
+  using the min/max technique.   The sensors must be placed in min and max positions
+  of all axis'
   
   The IMU needs to be spun in a at least one rotation to collect the
   Min, Max and Scale factor measurements in X and Y.
@@ -68,12 +68,12 @@ if applyCalibration:
         ySF = 0.7209744740877911
         zSF = 0
     else:
-        xBias = 33.378618240356445 
-        yBias = 49.02831268310547
-        zBias = 0
-        xSF = 1.1171133931456445
-        ySF = 1.1171133931456445
-        zSF = 1.1171133931456445
+        xBias = 33.4396071434021 
+        yBias = 52.10010492801666
+        zBias = -9.626970291137695
+        xSF = 1.113023470712413
+        ySF = 1.1085007183189335
+        zSF = 1.0771479869478615
 
 else:
     xBias = 0
@@ -91,6 +91,7 @@ prevUpdateTime = 0
 #
 horzMag = 17.679
 vertMag = 51.9472
+fieldMag = 54.8689
 xMax = -100
 yMax = -100
 zMax = -100
@@ -259,9 +260,9 @@ while True:
     xBiasEst = xMin+xSpan/2
     yBiasEst = yMin+ySpan/2
     zBiasEst = zMin+zSpan/2
-    xSFEst = horzMag/(xSpan/2)
-    ySFEst = horzMag/(ySpan/2)
-    zSFEst = vertMag/(zSpan/2)
+    xSFEst = fieldMag/(xSpan/2)
+    ySFEst = fieldMag/(ySpan/2)
+    zSFEst = fieldMag/(zSpan/2)
     print("X   : {0} {1}".format(xMin,xMax))
     print("Y   : {0} {1}".format(yMin,yMax))
     print("Z   : {0} {1}".format(zMin,zMax))
