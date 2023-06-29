@@ -9,8 +9,12 @@ magBias = (0.0, 0.0, 0.0)
 magScaleErr = (1.0, 1.0, 1.0)
 #magBias = (-5.03125, -13.0625, -51.3125)
 #magScaleErr = (1.0053287725448068, 0.9222875558319669, 4.0)
-magBias =     (-4.6875, -13.65625, -3.71875)
-magScaleErr = (0.9458473880937187, 0.889438417358009, 0.9988376333302945)
+#magBias =     (-4.6875, -13.65625, -3.71875)
+#magScaleErr = (0.9458473880937187, 0.889438417358009, 0.9988376333302945)
+# magBias =     (-25.8125, 1.40625, -32.4375)
+# magScaleErr = (0.3908742820676452, 0.4541207038016228, 0.04330385632236303)
+magBias =     (-26.65625, -9.34375, 17.28125)
+magScaleErr = (1.0523976661500594, 1.0957015224724223, 0.9976980581639165)
 magScaleF = (1.0/magScaleErr[0], 1.0/magScaleErr[1], 1.0/magScaleErr[2])
 applyCal = True
 
@@ -19,8 +23,8 @@ vMagField = 51.918
 magField = 54.845
 magRef = (magField, magField, magField)
     
-led = digitalio.DigitalInOut(board.G0)
-led.direction = digitalio.Direction.OUTPUT
+#led = digitalio.DigitalInOut(board.G0)
+#led.direction = digitalio.Direction.OUTPUT
 
 i2c = busio.I2C(board.SCL, board.SDA)
 sensor = adafruit_bno055.BNO055_I2C(i2c)
@@ -55,7 +59,8 @@ print("Starting")
 
 while True:
     #led.value = True
-    #time.sleep(0.25)
+    #
+    time.sleep(0.25)
     #led.value = False
     #time.sleep(0.25)
     #led.value = True
@@ -71,6 +76,8 @@ while True:
     #print("----Accelerometer (m/s^2): {}".format(sensor.acceleration))
     #print("----Gyroscope (rad/sec): {}".format(sensor.gyro))
     (magX, magY, magZ) = (sensor.magnetic[0], sensor.magnetic[1], sensor.magnetic[2])
+    if (magX == None or magY == None or magZ == None):
+        continue
     print("----Raw Mag      (microteslas): {0:05.3f}  {1:05.3f} {2:05.3f}".format(magX, magY, magZ))
     if applyCal == True:
         magX = (magX - magBias[0])*magScaleF[0]

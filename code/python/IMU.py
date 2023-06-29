@@ -77,7 +77,23 @@ class IMU():
         self.accelCalScaleFactor = accelCalScaleFactor
 
         self.magCalBias = magCalBias
-        self.magCalScaleFactor = magCalScaleFactor        
+        self.magCalScaleFactor = magCalScaleFactor
+        
+    def setGyroCalibraton(self, gyroCalBias, gyroCalScaleFactor):
+        
+        self.gyroCalBias = gyroCalBias
+        self.gyroCalScaleFactor = gyroCalScaleFactor
+        
+    def setAccelCalibraton(self, accelCalBias, accelCalScaleFactor):
+
+        self.accelCalBias = accelCalBias
+        self.accelCalScaleFactor = accelCalScaleFactor
+
+    def setMagCalibraton(self, magCalBias, magCalScaleFactor):
+
+        self.magCalBias = magCalBias
+        self.magCalScaleFactor = magCalScaleFactor
+
         
     def initialize(self):
         
@@ -125,6 +141,16 @@ class IMU():
         
         self.sampleTime = time.time() - self.timeOffset
         (self.rawRate,self.rawAccel,self.rawMag) = self.getRawData()
+        
+        if ( self.rawRate[0] == None or self.rawRate[1] == None or self.rawRate[2] == None or \
+             self.rawAccel[0] == None or self.rawAccel[1] == None or self.rawAccel[2] == None or \
+             self.rawMag[0] == None or self.rawMag[1] == None or self.rawMag[2] == None):
+            print("!!! Fail")
+            print(f"!!!    Time  {self.sampleTime}")
+            print(f"!!!    Rate  {self.rawRate}")
+            print(f"!!!    Accel {self.rawAccel}")
+            print(f"!!!    Mag   {self.rawMag}")
+            return(self.sampleTime,None,None,None)
         
 
         self.rateCal = self.gyroCalScaleFactor * (self.rawRate - self.gyroCalBias )
