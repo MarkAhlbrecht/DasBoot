@@ -3,7 +3,7 @@ import PWM_Motor
 from time import sleep
 
 
-motor = PWM_Motor.PWM_Motor(fwdGPIO=11, revGPIO=12, pwdGPIO=7, deadband=0, scaleFactor=1)
+motor = PWM_Motor.PWM_Motor(fwdGPIO=19, revGPIO=26, pwdGPIO=13, deadband=0, scaleFactor=1)
 
 # # CW at full speed
 print ("CW at full speed")

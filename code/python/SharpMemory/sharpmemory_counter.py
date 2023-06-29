@@ -10,7 +10,7 @@ not support PIL/pillow (python imaging library)!
 import board
 import busio
 import digitalio
-from PIL import Image, ImageDraw, ImageFont
+#from PIL import Image, ImageDraw, ImageFont
 import adafruit_sharpmemorydisplay
 import time
 
@@ -23,7 +23,7 @@ BORDER = 3
 FONTSIZE = 50
 
 spi = busio.SPI(board.SCK, MOSI=board.MOSI)
-scs = digitalio.DigitalInOut(board.D6)  # inverted chip select
+scs = digitalio.DigitalInOut(board.D22)  # inverted chip select
 
 # display = adafruit_sharpmemorydisplay.SharpMemoryDisplay(spi, scs, 96, 96)
 display = adafruit_sharpmemorydisplay.SharpMemoryDisplay(spi, scs, 400, 240)
@@ -34,38 +34,38 @@ display.show()
 
 # Create blank image for drawing.
 # Make sure to create image with mode '1' for 1-bit color.
-image = Image.new("1", (display.width, display.height))
+#image = Image.new("1", (display.width, display.height))
 
 # Get drawing object to draw on image.
-draw = ImageDraw.Draw(image)
+#draw = ImageDraw.Draw(image)
 
 # Draw a black background
-draw.rectangle((0, 0, display.width, display.height), outline=BLACK, fill=BLACK)
+#draw.rectangle((0, 0, display.width, display.height), outline=BLACK, fill=BLACK)
 
 # Draw a smaller inner rectangle
-draw.rectangle(
-    (BORDER, BORDER, display.width - BORDER - 1, display.height - BORDER - 1),
-    outline=WHITE,
-    fill=WHITE,
-)
+#draw.rectangle(
+#     (BORDER, BORDER, display.width - BORDER - 1, display.height - BORDER - 1),
+#     outline=WHITE,
+#     fill=WHITE,
+# )
 
 # Load a TTF font.
-font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 15)
-counterFont = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", FONTSIZE)
+#font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 15)
+#counterFont = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", FONTSIZE)
 
 count=0
 
 while(True):
   # Draw Some Text
   count=count+1
-  text = str(count)
-  #(font_width, font_height) = counterFont.getsize(text)
-  #draw.text(
-  #   (display.width // 2 - font_width // 2, display.height // 2 - font_height // 2),
-  #    text,
-  #    font=counterFont,
-  #    fill=BLACK,
-  #)
+#   text = str(count)
+#   (font_width, font_height) = counterFont.getsize(text)
+#   draw.text(
+#      (display.width // 2 - font_width // 2, display.height // 2 - font_height // 2),
+#       text,
+#       font=counterFont,
+#       fill=BLACK,
+#   )
   
   #draw.text(
   #    (15, 15),
@@ -75,11 +75,12 @@ while(True):
   #)
 
   # Display image
+ 
   #display.image(image)
   #display.show()
   display.fill(1)
-  display.text("DasBoot: "+ str(count), 40, 75, 0, size=4)
+  display.text("DB: "+ str(count/10), 40, 75, 0, size=5)
   display.show()
   
-  print(count)
+  #print(count)
   #display.fill(1)
