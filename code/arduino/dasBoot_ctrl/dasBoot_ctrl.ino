@@ -4,7 +4,7 @@
 */
 
 // COMPILE SWITCHES
-#define WAIT_FOR_SERIAL true
+#define WAIT_FOR_SERIAL false
 
 #include <Arduino.h>
 // Libraries for timer processes
