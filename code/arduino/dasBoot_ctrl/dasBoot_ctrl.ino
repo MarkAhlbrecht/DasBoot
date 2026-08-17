@@ -107,8 +107,10 @@ float prevElapsedTime = 0,dt=0;
 float pitch, roll, heading, track, turnRate, speed;
 int rudderRaw = 0;
 float rudderAngle = 0;
-float rudderCenter = 2048.0;
+float rudderCenter = 2080.0;
 float rudderScale = 180.0/2750.0;
+float rudderScaleStbd = -45.0/(1520-rudderCenter);
+float rudderScalePort = 45.0/(2690-rudderCenter);
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -140,6 +142,9 @@ float zeroDiff = 0;
 
 QuickPID headingPID(&hdgError, &ctrlOutput, &zeroDiff);
 QuickPID turnRatePID(&trError, &turnCtrlOutput, &zeroDiff);
+
+float rudderTarget = 0;
+float rudderCtrlBand = 2;
 
 
 
@@ -383,8 +388,20 @@ void loop() {
   //delay(100);
 
   rudderRaw = analogRead(RUDDER_PIN);
-  rudderAngle = ((int)rudderRaw - rudderCenter) * rudderScale;
-  Serial.print(rudderRaw); Serial.print(" "); Serial.println(rudderAngle); 
+  int rudderOffsetRaw = rudderRaw - rudderCenter;
+  if(rudderOffsetRaw <= 0) {  //STBD
+    rudderAngle = rudderOffsetRaw * rudderScaleStbd;
+
+  }
+  else{
+    rudderAngle = rudderOffsetRaw * rudderScalePort;
+  }
+  //rudderAngle = ((int)rudderRaw - rudderCenter) * rudderScale;
+  Serial.print(rudderRaw); Serial.print(" "); 
+  //Serial.print(rudderOffsetRaw); Serial.print(" "); 
+  Serial.print(rudderAngle); Serial.print(" ");
+  Serial.print(rudderTarget);
+  Serial.println("");
 
 
   // if(elapsedTime >= sendTime) {
@@ -786,16 +803,10 @@ void loop() {
 
     case MANUAL:
       if(portEncoderPosition > prevEncoderPosition) {
-        motorDriveTime = elapsedTime + motorTimeManual;
-        motorFwd = true;
-        motorOn = true;
-        //Serial1.println("FWD");
+        rudderTarget -= 1;
       }
       if(portEncoderPosition < prevEncoderPosition) {
-        motorDriveTime = elapsedTime + motorTimeManual;
-        motorFwd = false;
-        motorOn = true;
-        //Serial1.println("REV");
+        rudderTarget += 1;
       }
       if(buttonShortPress) {
         motorDriveTime = elapsedTime;
@@ -803,12 +814,14 @@ void loop() {
       }
 
       // Motor Handler
-      if(motorOn && elapsedTime < motorDriveTime)
+      float rudderError;
+      rudderError = rudderTarget - rudderAngle;
+      if( abs(rudderError) > rudderCtrlBand && abs(rudderAngle) < 45 )
       {
         //Serial.print(elapsedTime);
         //Serial.print(" ");
         //Serial.println(motorDriveTime);
-        if(motorFwd) { 
+        if(rudderError <= 0) { 
           motor_forward();
           sprintf(display_text[2],"--->Forward");
         }
@@ -823,6 +836,47 @@ void loop() {
         motor_stop();
         sprintf(display_text[2]," ");
       }
+      
+
+      // if(portEncoderPosition > prevEncoderPosition) {
+      //   motorDriveTime = elapsedTime + motorTimeManual;
+      //   motorFwd = true;
+      //   motorOn = true;
+      //   //Serial1.println("FWD");
+      // }
+      // if(portEncoderPosition < prevEncoderPosition) {
+      //   motorDriveTime = elapsedTime + motorTimeManual;
+      //   motorFwd = false;
+      //   motorOn = true;
+      //   //Serial1.println("REV");
+      // }
+      // if(buttonShortPress) {
+      //   motorDriveTime = elapsedTime;
+      //   motorOn = false;
+      // }
+
+      // // Motor Handler
+      // if(motorOn && elapsedTime < motorDriveTime)
+      // {
+      //   //Serial.print(elapsedTime);
+      //   //Serial.print(" ");
+      //   //Serial.println(motorDriveTime);
+      //   if(motorFwd) { 
+      //     motor_forward();
+      //     sprintf(display_text[2],"--->Forward");
+      //   }
+      //   else { 
+      //     motor_reverse();
+      //     sprintf(display_text[2],"    Reverse<---");
+      //   }
+      // }
+      // else
+      // {
+      //   motorOn = false;
+      //   motor_stop();
+      //   sprintf(display_text[2]," ");
+      // }
+      
 
 
     break;
@@ -862,6 +916,12 @@ void loop() {
   tempStr += String(int(dt*1000));
   tempStr.toCharArray(display_text[1],LINE_SIZE);
 
+  
+  tempStr = "    ";
+  tempStr += String(int(rudderAngle));
+  tempStr += " tgt= ";
+  tempStr += String(int(rudderTarget));
+  tempStr.toCharArray(display_text[7],LINE_SIZE);
   // // Line 3 Mode
   // tempStr = "--Line 3:";
   // tempStr.toCharArray(display_text[2],LINE_SIZE);
