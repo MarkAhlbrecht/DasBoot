@@ -5,7 +5,7 @@
 
 // COMPILE SWITCHES
 #define WAIT_FOR_SERIAL false
-#define ECHO_NMEA true
+#define ECHO_NMEA false
 
 typedef enum  { BOOT, BUGGY } VehicleType;
 #define N_VEHICLES 2
@@ -44,8 +44,8 @@ const VehicleType vehicle = BOOT;
 #include <angle_support.h>
 
 
-#define OTTO_LEG_W 25
-#define OTTO_LEG_H 25
+#define OTTO_LEG_W 75
+#define OTTO_LEG_H 75
 const float ottoOffsets[22][2] = {
    { 1 * OTTO_LEG_H,    13 * OTTO_LEG_W },
    { 1 * OTTO_LEG_H,    10 * OTTO_LEG_W },
@@ -74,11 +74,11 @@ const float ottoOffsets[22][2] = {
 int nOttoWpts = 22;
 
 const float boxOffsets[5][2] = {
-   { 5.0,     0.0 },
-   { 5.0,    25.0 },
-   { 30.0,   25.0 },
-   { 30.0,    0.0 },
-   { 5.0,     0.0 },
+   { 0.0,     0.0 },
+   { 0.0,    100.0 },
+   { 100.0,  100.0 },
+   { 100.0,    0.0 },
+   { 0.0,     0.0 },
 };
 int nBoxWpts = 5;
 
@@ -632,7 +632,7 @@ void setup() {
   headingPID.SetOutputLimits(-25.0, 25.0);
   headingPID.SetAntiWindupMode(QuickPID::iAwMode::iAwClamp);
   if(vehicle==BOOT) {
-    headingPID.SetOutputLimits(-25.0, 25.0);
+    headingPID.SetOutputLimits(-40.0, 40.0);
   }
   else
   {
@@ -646,7 +646,7 @@ void setup() {
   xtePID.SetOutputLimits(-25.0, 25.0);
   xtePID.SetAntiWindupMode(QuickPID::iAwMode::iAwClamp);
   if(vehicle==BOOT) {
-    xtePID.SetOutputLimits(-25.0, 25.0);
+    xtePID.SetOutputLimits(-40.0, 40.0);
   }
   else
   {
@@ -760,7 +760,7 @@ float buttonTime;
 int wayPointNum = 0;
 int nextWaypointNum = 0;
 bool nextWaypointReady = false;
-float nextWayPointDist = 3.0;
+float nextWayPointDist = 6.0;
 
 int guidanceMode = 0;
 float arrivalAngle = 0;
@@ -1541,7 +1541,7 @@ void loop() {
 
       // Motor Handler
       rudderError = rudderTarget - rudderAngle;
-      if( abs(rudderError) > rudderCtrlBand && abs(rudderAngle) < 45 )
+      if( abs(rudderError) > rudderCtrlBand && abs(rudderAngle) < 50 )
       {
         //Serial.print(elapsedTime);
         //Serial.print(" ");
@@ -1592,14 +1592,15 @@ void loop() {
 
     case MANUAL:
       if(portEncoderPosition > prevEncoderPosition) {
-        rudderTarget -= 1;
+        rudderTarget += 1;
       }
       if(portEncoderPosition < prevEncoderPosition) {
-        rudderTarget += 1;
+        rudderTarget -= 1;
       }
       if(buttonShortPress) {
         motorDriveTime = elapsedTime;
         motorOn = false;
+        rudderTarget = 0;
       }
 
       // Motor Handler
