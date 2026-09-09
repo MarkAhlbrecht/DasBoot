@@ -152,13 +152,16 @@ ControlTypeState controlType = HEADING;
 const char* controlTypeModes[] = {"SELECT_TYPE", "HEADING", "BEARING", "XTE"};
 int nControlTypeModes = 4;
 
+int kpRawInput =0, kiRawInput = 0, kdRawInput = 0;
+float updatedKp, updatedKi, updatedKd;
+
 // CONTROL GAINS
-enum ControlGainState { SELECT_GAIN, SELECT_KP, SELECT_KI, SELECT_KD };
+enum ControlGainState { SELECT_GAIN, SELECT_KP, SELECT_KI, SELECT_KD, BACK_GAIN };
 ControlGainState controlGainMode = SELECT_GAIN;
 ControlGainState controlGainTargetMode = SELECT_KP;
 
-const char* controlGainModes[] = {"SELECT_GAIN", "SELECT_KP", "SELECT_KI", "SELECT_KD"};
-int nControlGainModes = 4;
+const char* controlGainModes[] = {"SELECT_GAIN", "SELECT_KP", "SELECT_KI", "SELECT_KD","[back]"};
+int nControlGainModes = 5;
 
 // CONTROL ROUTE
 enum ControlRouteState { SELECT_ROUTE, FREE, BOX, OTTO };
@@ -627,6 +630,9 @@ void setup() {
 
   // Initialize Heading Controller
   headingPID.SetTunings(Kp[vehicle], Ki[vehicle], Kd[vehicle]);
+  updatedKp = Kp[vehicle];
+  updatedKi = Ki[vehicle];
+  updatedKd = Kd[vehicle];
   headingPID.SetMode(QuickPID::Control::timer);
   headingPID.SetSampleTimeUs(50*1000);
   headingPID.SetOutputLimits(-25.0, 25.0);
@@ -1290,7 +1296,7 @@ void loop() {
       xtePID.SetOutputSum(0.0);
 
       //controlTypeModes
-      sprintf(display_text[2]," STANDBY - %s",controlTypeModes[controlTypeMode]);
+      sprintf(display_text[2]," STANDBY - %s",controlTypeModes[controlType]);
       sprintf(display_text[3],"    %03d      %+03d  ",(int)hdgTarget360,(int)turnRateTarget);
       sprintf(display_text[4],"  - %03d -  - %+03d -",(int)hdg360,(int)turnRate);
 
@@ -1318,7 +1324,7 @@ void loop() {
     case AUTO:
       
 
-      switch(controlTypeMode) {
+      switch(controlType) {
 
         ////////////// HEADING CONTROL /////////////////
         case HEADING:
@@ -1567,7 +1573,7 @@ void loop() {
       }
 
       //sprintf(display_text[2],"        AUTO");
-      sprintf(display_text[2],"   AUTO - %s",controlTypeModes[controlTypeMode]);
+      sprintf(display_text[2],"   AUTO - %s",controlTypeModes[controlType]);
       sprintf(display_text[3],"    %03d      %+03d  ",(int)hdgTarget360,(int)turnRateTarget);
       if(motorOn && motorFwd) {
         sprintf(display_text[4]," => %03d      %+03d  ",(int)hdg360,(int)turnRate);
@@ -1751,11 +1757,202 @@ void loop() {
           
           if(buttonShortPress) {        
             controlTypeMode=controlTypeTargetMode;
-            //controlType=
+            controlType=controlTypeTargetMode;
             Serial.print("CTRL Type -> ");
-            Serial.println(controlTypeMode);
+            Serial.println(controlType);
             controlMode=MENU;
           }
+        break;
+
+
+
+        case GAINS:
+
+          switch(controlGainMode) {
+
+            case(SELECT_GAIN):
+              tmpInt = do_menu( (int)nControlGainModes, (int)controlGainTargetMode, controlGainModes );
+              controlGainTargetMode = (ControlGainState)tmpInt;
+
+              if(buttonShortPress) {
+                controlGainMode=controlGainTargetMode;
+                Serial.print("Gain Type -> ");
+                Serial.println(controlGainMode);
+                //controlMode=MENU;
+              }
+            break;
+
+            case(SELECT_KP):
+
+              if(portEncoderPosition > prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kpRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kpRawInput < -100){
+                  kpRawInput = -100;
+                }
+              }
+              // CW -1
+              if(portEncoderPosition < prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kpRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kpRawInput > 100) {
+                  kpRawInput = 100;
+                }
+              }
+
+              Serial.print(kpRawInput);
+              float gainScaleFactor;
+              float KpMult;
+              
+
+              gainScaleFactor = (float)kpRawInput/100.0;
+              if( kpRawInput < 0 ) {
+                KpMult = 1 + (-1*gainScaleFactor * 10); 
+              }
+              else {
+                KpMult = (1.0-gainScaleFactor);
+              }
+              updatedKp = Kp[0]*KpMult;
+
+
+              Serial.print(" ");
+              Serial.print(gainScaleFactor);
+              Serial.print(" ");
+              Serial.print(KpMult);
+              Serial.print(" ");
+              Serial.print(updatedKp);
+              Serial.println("");
+
+              sprintf(display_text[2],"Adjust Kp");
+              sprintf(display_text[3],"Org: %5.2f",Kp[0]);
+              sprintf(display_text[4],"Cur: %5.2f",headingPID.GetKp());
+              sprintf(display_text[5],"New: %5.2f",updatedKp);
+
+              if(buttonShortPress) {
+                Serial.print("Kp -> ");
+                Serial.println(updatedKp);
+                headingPID.SetTunings(updatedKp, updatedKi, updatedKd);
+                controlGainMode=SELECT_GAIN;
+              }
+            break;
+
+            case(SELECT_KI):
+              if(portEncoderPosition > prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kiRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kiRawInput < -100){
+                  kiRawInput = -100;
+                }
+              }
+              // CW -1
+              if(portEncoderPosition < prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kiRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kiRawInput > 100) {
+                  kiRawInput = 100;
+                }
+              }
+
+              Serial.print(kiRawInput);
+              float gainKiScaleFactor;
+              float KiMult;
+              
+
+              gainKiScaleFactor = (float)kiRawInput/100.0;
+              if( kiRawInput < 0 ) {
+                KiMult = 1 + (-1*gainKiScaleFactor * 10); 
+              }
+              else {
+                KiMult = (1.0-gainKiScaleFactor);
+              }
+              updatedKi = Ki[0]*KiMult;
+
+
+              Serial.print(" ");
+              Serial.print(gainKiScaleFactor);
+              Serial.print(" ");
+              Serial.print(KiMult);
+              Serial.print(" ");
+              Serial.print(updatedKi);
+              Serial.println("");
+
+              sprintf(display_text[2],"Adjust Ki");
+              sprintf(display_text[3],"Org: %5.2f",Ki[0]);
+              sprintf(display_text[4],"Cur: %5.2f",headingPID.GetKi());
+              sprintf(display_text[5],"New: %5.2f",updatedKi);
+
+              if(buttonShortPress) {
+                Serial.print("Ki -> ");
+                Serial.println(updatedKi);
+                headingPID.SetTunings(updatedKp, updatedKi, updatedKd);
+                controlGainMode=SELECT_GAIN;
+              }
+            break;
+
+            case(SELECT_KD):
+              if(portEncoderPosition > prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kdRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kdRawInput < -100){
+                  kdRawInput = -100;
+                }
+              }
+              // CW -1
+              if(portEncoderPosition < prevEncoderPosition) {
+                //Serial.print(portEncoderPosition); Serial.print(" "); Serial.print(prevEncoderPosition); Serial.println(" ");
+                kdRawInput -= -1*(portEncoderPosition - prevEncoderPosition);
+                if(kdRawInput > 100) {
+                  kdRawInput = 100;
+                }
+              }
+
+              Serial.print(kdRawInput);
+              float gainKdScaleFactor;
+              float KdMult;
+              
+
+              gainKdScaleFactor = (float)kiRawInput/100.0;
+              if( kdRawInput < 0 ) {
+                KdMult = 1 + (-1*gainKdScaleFactor * 10); 
+              }
+              else {
+                KdMult = (1.0-gainKdScaleFactor);
+              }
+              updatedKi = Kd[0]*KdMult;
+
+
+              Serial.print(" ");
+              Serial.print(gainKdScaleFactor);
+              Serial.print(" ");
+              Serial.print(KdMult);
+              Serial.print(" ");
+              Serial.print(updatedKd);
+              Serial.println("");
+
+              sprintf(display_text[2],"Adjust Ki");
+              sprintf(display_text[3],"Org: %5.2f",Kd[0]);
+              sprintf(display_text[4],"Cur: %5.2f",headingPID.GetKd());
+              sprintf(display_text[5],"New: %5.2f",updatedKd);
+
+              if(buttonShortPress) {
+                Serial.print("Kd -> ");
+                Serial.println(updatedKd);
+                headingPID.SetTunings(updatedKp, updatedKi, updatedKd);
+                controlGainMode=SELECT_GAIN;
+              }
+            break;
+
+            case(BACK_GAIN):
+              controlGainMode=SELECT_GAIN;
+              controlMode=MENU;
+            break;
+
+            default:
+              controlGainMode=SELECT_GAIN;
+              controlMode=MENU;
+
+          }
+
         break;
 
 
@@ -1962,7 +2159,7 @@ void loop() {
     tempStr += ",";
     tempStr += String(steeringCmd);
     tempStr += ",";
-    if(controlTypeMode != XTE ) {
+    if(controlType != XTE ) {
       tempStr += String(headingPID.GetKp());
       tempStr += ",";
       tempStr += String(headingPID.GetKi());
@@ -1993,7 +2190,7 @@ void loop() {
     // CRGUI Message
     if(true) {
       int msgMode;
-      msgMode = int(controlTypeMode)-1;
+      msgMode = int(controlType)-1;
       if(msgMode <0) { msgMode = 0; }
       // if (navSource == 1 && guidanceMode == 0) {
       //   msgMode = 1;
